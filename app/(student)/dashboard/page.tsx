@@ -10,12 +10,25 @@ import MonthlyProgressChart from '@/components/charts/MonthlyProgressChart';
 
 export default function StudentDashboardPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState(MOCK_STUDENT_PROFILE);
+  const [profile, setProfile] = useState<any>(MOCK_STUDENT_PROFILE);
 
   useEffect(() => {
     const authData = localStorage.getItem('pathfinder_auth');
     if (!authData) {
       router.push('/login');
+    } else {
+      try {
+        const userObj = JSON.parse(authData);
+        setProfile({
+          full_name: userObj.name || userObj.fullName || 'Student',
+          student_id: userObj.student_id || 'PF-2026-089',
+          school: userObj.school || 'Ananda College, Colombo',
+          al_year: userObj.al_year || userObj.alYear || 2026,
+          combination: userObj.combination || MOCK_STUDENT_PROFILE.combination
+        });
+      } catch (err) {
+        // Fallback
+      }
     }
   }, [router]);
 
@@ -40,7 +53,7 @@ export default function StudentDashboardPage() {
       <div className="bg-gradient-to-r from-slate-900 to-slate-950 text-white p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-950 border border-emerald-800 text-emerald-400 text-xs font-bold rounded-full">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Enrolled Student Active Session
+            <CheckCircle2 className="w-3.5 h-3.5" /> Enrolled Student Session Active
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             Welcome back, <span className="text-emerald-400">{profile.full_name}</span>!
@@ -49,7 +62,7 @@ export default function StudentDashboardPage() {
             Student ID: <span className="font-mono text-emerald-300 font-bold">{profile.student_id}</span> | {profile.school} | Batch {profile.al_year}
           </p>
           <p className="text-xs text-slate-400">
-            Subject Combination: <strong className="text-slate-200">{profile.combination?.name} ({profile.combination?.description})</strong>
+            Subject Combination: <strong className="text-slate-200">{profile.combination?.name || 'Combination 1'} ({profile.combination?.displayName || 'Accounting + Economics + ICT'})</strong>
           </p>
         </div>
 

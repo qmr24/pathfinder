@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserPlus, CheckCircle2, AlertCircle, Shield, BookOpen } from 'lucide-react';
 import { SUBJECT_COMBINATIONS } from '@/lib/constants';
+import { createClient } from '@/lib/supabase/client';
 
 export default function StudentSignupPage() {
   const router = useRouter();
@@ -21,9 +22,8 @@ export default function StudentSignupPage() {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -39,27 +39,50 @@ export default function StudentSignupPage() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      // Create student profile session
+    try {
+      const supabase = createClient();
       const selectedComb = SUBJECT_COMBINATIONS.find(c => c.id === formData.combinationId);
-      
-      localStorage.setItem('pathfinder_auth', JSON.stringify({
+      const generatedStudentId = `PF-${formData.alYear}-${Math.floor(100 + Math.random() * 900)}`;
+
+      // Attempt Supabase Auth Sign Up
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: formData.email.trim(),
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            student_id: generatedStudentId,
+            school: formData.school,
+            phone_number: formData.phone,
+            al_year: parseInt(formData.alYear),
+            combination_id: formData.combinationId
+          }
+        }
+      });
+
+      // Save student profile data
+      const studentProfile = {
         role: 'student',
-        email: formData.email,
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password, // Local fallback check
         name: formData.fullName,
-        student_id: `PF-${formData.alYear}-${Math.floor(100 + Math.random() * 900)}`,
-        school: formData.school,
+        student_id: generatedStudentId,
+        school: formData.school || 'Commerce Stream School',
+        phone_number: formData.phone,
         al_year: parseInt(formData.alYear),
         combination: selectedComb
-      }));
+      };
 
-      setSuccess(true);
+      // Store account so user can log in with their exact email & password
+      localStorage.setItem(`pathfinder_user_${formData.email.trim().toLowerCase()}`, JSON.stringify(studentProfile));
+      localStorage.setItem('pathfinder_auth', JSON.stringify(studentProfile));
+
       setLoading(false);
-
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1200);
-    }, 800);
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError('Account creation failed. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,173 +107,165 @@ export default function StudentSignupPage() {
           </div>
         )}
 
-        {success ? (
-          <div className="py-12 text-center space-y-4">
-            <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" />
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Registration Successful!</h3>
-            <p className="text-xs text-slate-500">Redirecting to your student dashboard...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSignup} className="space-y-4">
-            {/* Full Name & Email */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Full Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                  placeholder="e.g. Kamal Perera"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Email Address <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="kamal@student.lk"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-            </div>
-
-            {/* School & Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  School / Institution
-                </label>
-                <input
-                  type="text"
-                  value={formData.school}
-                  onChange={(e) => setFormData({...formData, school: e.target.value})}
-                  placeholder="e.g. Ananda College, Colombo"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  placeholder="+94 77 123 4567"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-            </div>
-
-            {/* A/L Batch Year */}
+        <form onSubmit={handleSignup} className="space-y-4">
+          {/* Full Name & Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Target A/L Batch Year
+                Full Name <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={formData.alYear}
-                onChange={(e) => setFormData({...formData, alYear: e.target.value})}
+              <input
+                type="text"
+                required
+                value={formData.fullName}
+                onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                placeholder="e.g. Kamal Perera"
                 className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="2026">2026 A/L Batch</option>
-                <option value="2027">2027 A/L Batch</option>
-                <option value="2028">2028 A/L Batch</option>
-              </select>
+              />
             </div>
 
-            {/* Subject Combination Selection */}
-            <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <label className="block text-xs font-bold text-slate-900 dark:text-white">
-                Select Your A/L Commerce Subject Combination <span className="text-rose-500">*</span>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Email Address <span className="text-rose-500">*</span>
               </label>
-              <div className="grid grid-cols-1 gap-3">
-                {SUBJECT_COMBINATIONS.map(comb => (
-                  <label
-                    key={comb.id}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
-                      formData.combinationId === comb.id
-                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="combination"
-                      value={comb.id}
-                      checked={formData.combinationId === comb.id}
-                      onChange={() => setFormData({...formData, combinationId: comb.id})}
-                      className="mt-1 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">
-                        {comb.name}: {comb.displayName}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Subjects: {comb.subjects.join(', ')}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                placeholder="kamal@student.lk"
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          {/* School & Phone */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                School / Institution
+              </label>
+              <input
+                type="text"
+                value={formData.school}
+                onChange={(e) => setFormData({...formData, school: e.target.value})}
+                placeholder="e.g. Ananda College, Colombo"
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
 
-            {/* Password & Confirm */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Create Password <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Confirm Password <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                placeholder="+94 77 123 4567"
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors flex items-center justify-center gap-2 text-sm shadow-md mt-4"
+          {/* A/L Batch Year */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Target A/L Batch Year
+            </label>
+            <select
+              value={formData.alYear}
+              onChange={(e) => setFormData({...formData, alYear: e.target.value})}
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              {loading ? (
-                <span>Registering Profile...</span>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4" />
-                  Create Student Account
-                </>
-              )}
-            </button>
-          </form>
-        )}
+              <option value="2026">2026 A/L Batch</option>
+              <option value="2027">2027 A/L Batch</option>
+              <option value="2028">2028 A/L Batch</option>
+            </select>
+          </div>
+
+          {/* Subject Combination Selection */}
+          <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <label className="block text-xs font-bold text-slate-900 dark:text-white">
+              Select Your A/L Commerce Subject Combination <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-1 gap-3">
+              {SUBJECT_COMBINATIONS.map(comb => (
+                <label
+                  key={comb.id}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                    formData.combinationId === comb.id
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="combination"
+                    value={comb.id}
+                    checked={formData.combinationId === comb.id}
+                    onChange={() => setFormData({...formData, combinationId: comb.id})}
+                    className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      {comb.name}: {comb.displayName}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Subjects: {comb.subjects.join(', ')}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Password & Confirm */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Create Password <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Confirm Password <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors flex items-center justify-center gap-2 text-sm shadow-md mt-4"
+          >
+            {loading ? (
+              <span>Creating Your Account...</span>
+            ) : (
+              <>
+                <UserPlus className="w-4 h-4" />
+                Create Student Account
+              </>
+            )}
+          </button>
+        </form>
 
         <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500">
           Already registered?{' '}
