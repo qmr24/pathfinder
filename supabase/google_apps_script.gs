@@ -1,21 +1,20 @@
 /**
  * PATH FINDERS LMS — Google Apps Script Web App Engine (Code.gs)
- * 
- * Instructions:
- * 1. Create a Google Sheet named "PATH_FINDERS_DATABASE".
- * 2. Create 7 tabs named exactly:
- *    - Students
- *    - Monthly_Assessments
- *    - Monthly_Marks
- *    - Term_Exams
- *    - Term_Marks
- *    - Resources
- *    - Admins
- * 3. Go to Extensions -> Apps Script, replace Code.gs with this exact file, and click Deploy -> New Deployment -> Web App (Execute as Me, Anyone has access).
+ * Google Sheet ID: 1WzWi1vpwR2pI7XV2XADhpo3Y7EAflNZpmcQrS_8IBRc
  */
 
+var SPREADSHEET_ID = "1WzWi1vpwR2pI7XV2XADhpo3Y7EAflNZpmcQrS_8IBRc";
+
+function getDB() {
+  try {
+    return SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (e) {
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  }
+}
+
 function doGet(e) {
-  var action = e.parameter.action;
+  var action = e ? e.parameter.action : "";
   var response = {};
 
   try {
@@ -26,7 +25,7 @@ function doGet(e) {
     } else if (action === "getResources") {
       response = getResources(e.parameter.subjectCode);
     } else {
-      response = { status: "error", message: "Invalid action" };
+      response = { status: "success", message: "Path Finders Google Apps Script API is operational." };
     }
   } catch (err) {
     response = { status: "error", message: err.toString() };
@@ -41,7 +40,7 @@ function doPost(e) {
   try {
     data = JSON.parse(e.postData.contents);
   } catch (err) {
-    data = e.parameter;
+    data = e ? e.parameter : {};
   }
 
   var action = data.action;
@@ -74,13 +73,15 @@ function doPost(e) {
 // ---------------- API FUNCTIONS ----------------
 
 function registerStudent(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getDB();
   var sheet = ss.getSheetByName("Students");
+  if (!sheet) return { status: "error", message: "Sheet 'Students' tab not found." };
+  
   var rows = sheet.getDataRange().getValues();
 
   // Check duplicate email
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][2].toString().toLowerCase() === data.email.toString().toLowerCase()) {
+    if (rows[i][2] && rows[i][2].toString().toLowerCase() === data.email.toString().toLowerCase()) {
       return { status: "error", message: "Email is already registered." };
     }
   }
@@ -114,12 +115,14 @@ function registerStudent(data) {
 }
 
 function loginStudent(email, password) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getDB();
   var sheet = ss.getSheetByName("Students");
+  if (!sheet) return { status: "error", message: "Sheet 'Students' tab not found." };
+
   var rows = sheet.getDataRange().getValues();
 
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][2].toString().toLowerCase() === email.toString().toLowerCase()) {
+    if (rows[i][2] && rows[i][2].toString().toLowerCase() === email.toString().toLowerCase()) {
       if (rows[i][3].toString() === password.toString()) {
         return {
           status: "success",
@@ -143,12 +146,14 @@ function loginStudent(email, password) {
 }
 
 function loginAdmin(email, password) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getDB();
   var sheet = ss.getSheetByName("Admins");
+  if (!sheet) return { status: "error", message: "Sheet 'Admins' tab not found." };
+
   var rows = sheet.getDataRange().getValues();
 
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][0].toString().toLowerCase() === email.toString().toLowerCase()) {
+    if (rows[i][0] && rows[i][0].toString().toLowerCase() === email.toString().toLowerCase()) {
       if (rows[i][1].toString() === password.toString()) {
         return {
           status: "success",
@@ -163,8 +168,10 @@ function loginAdmin(email, password) {
 }
 
 function createAssessment(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getDB();
   var sheet = ss.getSheetByName("Monthly_Assessments");
+  if (!sheet) return { status: "error", message: "Sheet 'Monthly_Assessments' tab not found." };
+
   var id = "ASS-" + Date.now();
   var startTime = new Date().toISOString();
   var duration = data.durationMinutes || 60; // 1-hour default countdown
@@ -186,8 +193,10 @@ function createAssessment(data) {
 }
 
 function getAssessments() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getDB();
   var sheet = ss.getSheetByName("Monthly_Assessments");
+  if (!sheet) return { status: "success", assessments: [] };
+
   var rows = sheet.getDataRange().getValues();
   var list = [];
   var now = new Date().getTime();
@@ -215,8 +224,9 @@ function getAssessments() {
 }
 
 function saveBulkMonthlyMarks(marksArray) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getDB();
   var sheet = ss.getSheetByName("Monthly_Marks");
+  if (!sheet) return { status: "error", message: "Sheet 'Monthly_Marks' tab not found." };
 
   for (var i = 0; i < marksArray.length; i++) {
     var item = marksArray[i];
@@ -238,8 +248,9 @@ function saveBulkMonthlyMarks(marksArray) {
 }
 
 function saveBulkTermMarks(marksArray) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getDB();
   var sheet = ss.getSheetByName("Term_Marks");
+  if (!sheet) return { status: "error", message: "Sheet 'Term_Marks' tab not found." };
 
   for (var i = 0; i < marksArray.length; i++) {
     var item = marksArray[i];
@@ -260,8 +271,10 @@ function saveBulkTermMarks(marksArray) {
 }
 
 function getResources(subjectCode) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getDB();
   var sheet = ss.getSheetByName("Resources");
+  if (!sheet) return { status: "success", resources: [] };
+
   var rows = sheet.getDataRange().getValues();
   var list = [];
 
