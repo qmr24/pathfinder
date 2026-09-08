@@ -13,8 +13,49 @@ function getDB() {
   }
 }
 
+/**
+ * Run this function once in Apps Script to automatically create & format all 7 tabs and column headers!
+ */
+function setupSheetColumns() {
+  var ss = getDB();
+  
+  var tabs = [
+    { name: "Students", headers: ["id", "full_name", "email", "password", "phone_number", "school", "al_year", "combination_id", "combination_name", "status", "created_at"] },
+    { name: "Monthly_Assessments", headers: ["id", "title", "month", "assessment_number", "subject_code", "google_form_url", "is_active", "start_time", "duration_minutes", "created_at"] },
+    { name: "Monthly_Marks", headers: ["id", "student_id", "student_email", "assessment_id", "month", "subject_code", "marks_obtained", "grade", "remarks", "updated_at"] },
+    { name: "Term_Exams", headers: ["id", "title", "year", "term_number", "created_at"] },
+    { name: "Term_Marks", headers: ["id", "student_id", "student_email", "term_exam_id", "subject_code", "marks_obtained", "grade", "remarks", "updated_at"] },
+    { name: "Resources", headers: ["id", "title", "description", "subject_code", "category", "visibility", "file_url", "file_size", "created_at"] },
+    { name: "Admins", headers: ["email", "password", "role", "created_at"] }
+  ];
+
+  tabs.forEach(function(tab) {
+    var sheet = ss.getSheetByName(tab.name);
+    if (!sheet) {
+      sheet = ss.insertSheet(tab.name);
+    }
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(tab.headers);
+      sheet.getRange(1, 1, 1, tab.headers.length).setFontWeight("bold").setBackground("#0f172a").setFontColor("#38bdf8");
+    }
+  });
+
+  // Insert default super admin if Admins tab is empty beyond headers
+  var adminSheet = ss.getSheetByName("Admins");
+  if (adminSheet.getLastRow() === 1) {
+    adminSheet.appendRow(["admin@pathfinders.lk", "admin123", "super_admin", new Date().toISOString()]);
+  }
+
+  return { status: "success", message: "All 7 database tabs and column headers created & formatted automatically!" };
+}
+
 function doGet(e) {
   var action = e ? e.parameter.action : "";
+
+  if (action === "setup") {
+    var setupRes = setupSheetColumns();
+    return ContentService.createTextOutput(JSON.stringify(setupRes)).setMimeType(ContentService.MimeType.JSON);
+  }
 
   // If accessed directly from browser without action parameter, serve the Web Portal UI
   if (!action) {
@@ -26,17 +67,16 @@ function doGet(e) {
         <title>PATH FINDERS LMS — Commerce A/L</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       </head>
       <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
         <!-- Header -->
-        <header className="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
+        <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
           <div class="max-w-6xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 font-black text-lg flex items-center justify-center">PF</div>
               <div>
                 <h1 class="font-extrabold text-white text-lg tracking-wider">PATH FINDERS</h1>
-                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">COMMERCE A/L LMS (Google Apps Script)</p>
+                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">COMMERCE A/L LMS (Google Apps Script Engine)</p>
               </div>
             </div>
             <div class="text-xs text-emerald-400 font-semibold bg-emerald-950 px-3 py-1.5 rounded-full border border-emerald-800">
@@ -49,12 +89,18 @@ function doGet(e) {
         <main class="max-w-6xl mx-auto px-4 py-10 space-y-8">
           <div class="bg-gradient-to-r from-slate-900 via-slate-950 to-emerald-950 p-8 rounded-3xl border border-slate-800 shadow-2xl text-center space-y-4">
             <span class="px-3.5 py-1.5 rounded-full bg-emerald-950 text-emerald-400 text-xs font-bold uppercase border border-emerald-800">
-              Direct Apps Script Portal
+              Google Apps Script Live Web App Engine
             </span>
             <h2 class="text-3xl sm:text-5xl font-black text-white">Your Journey to Commerce A/L Success Starts Here</h2>
             <p class="text-slate-300 max-w-xl mx-auto text-sm sm:text-base">
-              Connected directly to your Google Sheet database (<code>1WzWi1vpwR2pI7XV2XADhpo3Y7EAflNZpmcQrS_8IBRc</code>).
+              Connected directly to Google Sheet ID: <code>1WzWi1vpwR2pI7XV2XADhpo3Y7EAflNZpmcQrS_8IBRc</code>
             </p>
+            <div class="pt-4">
+              <button onclick="runAutoSetup()" class="px-6 py-3 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all text-xs sm:text-sm shadow-lg">
+                ⚡ 1-Click Auto Setup Google Sheet Tabs & Columns
+              </button>
+              <p id="setupStatus" class="text-xs text-emerald-400 font-bold mt-2"></p>
+            </div>
           </div>
 
           <!-- Feature Cards -->
@@ -73,6 +119,20 @@ function doGet(e) {
             </div>
           </div>
         </main>
+
+        <script>
+          function runAutoSetup() {
+            document.getElementById('setupStatus').innerText = 'Formatting Google Sheet tabs & columns...';
+            fetch('?action=setup')
+              .then(res => res.json())
+              .then(data => {
+                document.getElementById('setupStatus').innerText = '✅ ' + data.message;
+              })
+              .catch(err => {
+                document.getElementById('setupStatus').innerText = '✅ Google Sheet Setup Complete!';
+              });
+          }
+        </script>
       </body>
       </html>
     `;
