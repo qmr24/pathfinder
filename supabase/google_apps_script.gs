@@ -15,8 +15,74 @@ function getDB() {
 
 function doGet(e) {
   var action = e ? e.parameter.action : "";
-  var response = {};
 
+  // If accessed directly from browser without action parameter, serve the Web Portal UI
+  if (!action) {
+    var htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <base target="_top">
+        <title>PATH FINDERS LMS — Commerce A/L</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      </head>
+      <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <!-- Header -->
+        <header className="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
+          <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 font-black text-lg flex items-center justify-center">PF</div>
+              <div>
+                <h1 class="font-extrabold text-white text-lg tracking-wider">PATH FINDERS</h1>
+                <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">COMMERCE A/L LMS (Google Apps Script)</p>
+              </div>
+            </div>
+            <div class="text-xs text-emerald-400 font-semibold bg-emerald-950 px-3 py-1.5 rounded-full border border-emerald-800">
+              🟢 Live Google Sheet Database
+            </div>
+          </div>
+        </header>
+
+        <!-- Main Banner -->
+        <main class="max-w-6xl mx-auto px-4 py-10 space-y-8">
+          <div class="bg-gradient-to-r from-slate-900 via-slate-950 to-emerald-950 p-8 rounded-3xl border border-slate-800 shadow-2xl text-center space-y-4">
+            <span class="px-3.5 py-1.5 rounded-full bg-emerald-950 text-emerald-400 text-xs font-bold uppercase border border-emerald-800">
+              Direct Apps Script Portal
+            </span>
+            <h2 class="text-3xl sm:text-5xl font-black text-white">Your Journey to Commerce A/L Success Starts Here</h2>
+            <p class="text-slate-300 max-w-xl mx-auto text-sm sm:text-base">
+              Connected directly to your Google Sheet database (<code>1WzWi1vpwR2pI7XV2XADhpo3Y7EAflNZpmcQrS_8IBRc</code>).
+            </p>
+          </div>
+
+          <!-- Feature Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-2">
+              <h3 class="text-lg font-bold text-white">📊 Google Sheets DB</h3>
+              <p class="text-xs text-slate-400">Stores Student accounts, Monthly marks, and Term exam matrices in real time.</p>
+            </div>
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-2">
+              <h3 class="text-lg font-bold text-white">⏱️ 1-Hour Timers</h3>
+              <p class="text-xs text-slate-400">Automated countdown timer locks Google Form assessments after 60 minutes.</p>
+            </div>
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-2">
+              <h3 class="text-lg font-bold text-white">🚀 $0 Cost Guarantee</h3>
+              <p class="text-xs text-slate-400">No external databases or paid hosting required.</p>
+            </div>
+          </div>
+        </main>
+      </body>
+      </html>
+    `;
+    return HtmlService.createHtmlOutput(htmlContent)
+      .setTitle("PATH FINDERS LMS")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  // REST API JSON response for Next.js frontend calls
+  var response = {};
   try {
     if (action === "getStudentData") {
       response = getStudentData(e.parameter.email);
@@ -25,7 +91,7 @@ function doGet(e) {
     } else if (action === "getResources") {
       response = getResources(e.parameter.subjectCode);
     } else {
-      response = { status: "success", message: "Path Finders Google Apps Script API is operational." };
+      response = { status: "error", message: "Invalid action" };
     }
   } catch (err) {
     response = { status: "error", message: err.toString() };
@@ -79,7 +145,6 @@ function registerStudent(data) {
   
   var rows = sheet.getDataRange().getValues();
 
-  // Check duplicate email
   for (var i = 1; i < rows.length; i++) {
     if (rows[i][2] && rows[i][2].toString().toLowerCase() === data.email.toString().toLowerCase()) {
       return { status: "error", message: "Email is already registered." };
@@ -174,7 +239,7 @@ function createAssessment(data) {
 
   var id = "ASS-" + Date.now();
   var startTime = new Date().toISOString();
-  var duration = data.durationMinutes || 60; // 1-hour default countdown
+  var duration = data.durationMinutes || 60;
 
   sheet.appendRow([
     id,
