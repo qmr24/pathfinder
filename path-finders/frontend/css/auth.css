@@ -1,0 +1,1 @@
+.auth-page{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#ecfeff,#f8fafc)}.auth-card{width:min(480px,100%);background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:32px;box-shadow:0 20px 50px rgba(15,23,42,.1)}.auth-card h1{margin:0 0 6px}.auth-card p{color:#64748b}.auth-card .btn{width:100%}

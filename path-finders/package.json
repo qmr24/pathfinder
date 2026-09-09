@@ -1,0 +1,8 @@
+{
+  "name": "path-finders-lms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Path Finders LMS starter project",
+  "scripts": {"dev": "npx serve frontend", "preview": "npx serve frontend"},
+  "dependencies": {"@supabase/supabase-js": "latest", "chart.js": "latest"}
+}
