@@ -3,19 +3,6 @@ create extension if not exists pgcrypto;
 create type public.user_role as enum ('student','admin');
 create type public.admin_role as enum ('super_admin','academic_admin','content_admin');
 
-create table public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  full_name text not null,
-  student_id text unique,
-  email text,
-  school text,
-  al_batch integer,
-  role public.user_role not null default 'student',
-  combination_id uuid references public.subject_combinations(id),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 create table public.subjects (
   id uuid primary key default gen_random_uuid(),
   code text unique not null,
@@ -33,6 +20,19 @@ create table public.combination_subjects (
   combination_id uuid references public.subject_combinations(id) on delete cascade,
   subject_id uuid references public.subjects(id) on delete cascade,
   primary key (combination_id, subject_id)
+);
+
+create table public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text not null,
+  student_id text unique,
+  email text,
+  school text,
+  al_batch integer,
+  role public.user_role not null default 'student',
+  combination_id uuid references public.subject_combinations(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table public.assessments (
@@ -114,9 +114,8 @@ create table public.audit_logs (
   created_at timestamptz not null default now()
 );
 
--- Automatically create the application profile after Supabase Auth signup.
--- The role is always forced to student; admin access is controlled separately
--- by public.admin_roles and database policies.
+-- Automatically create a student profile after Supabase Auth signup.
+-- Admin access is never created by public signup.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -157,6 +156,27 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Students cannot change identity/academic-control fields through the browser.
+create or replace function public.prevent_student_privilege_changes()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() = old.id and old.role = 'student' then
+    new.role := old.role;
+    new.student_id := old.student_id;
+    new.combination_id := old.combination_id;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger protect_student_fields
+  before update on public.profiles
+  for each row execute procedure public.prevent_student_privilege_changes();
 
 create or replace function public.set_updated_at()
 returns trigger
