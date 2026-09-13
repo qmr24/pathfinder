@@ -19,7 +19,8 @@ function showMessage(text, type = 'alert') {
     const el = document.getElementById('message');
 
     if (el) {
-        el.innerHTML = `<div class="${type}">${text}</div>`;
+        el.textContent = text;
+        el.className = type;
     }
 }
 
