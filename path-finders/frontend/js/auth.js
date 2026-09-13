@@ -1,13 +1,14 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// Supabase browser client
+// NEVER put the service-role key in frontend code.
 
 const SUPABASE_URL = 'https://ztgcchuceqcdcpzephww.supabase.co';
-
 const SUPABASE_ANON_KEY = 'sb_publishable_rmmBJ77ypdwgK9a0Ec0KLA_cP0efZ1w';
 
-const supabaseClient = createClient(
+const supabaseClient = supabase.createClient(
     SUPABASE_URL,
     SUPABASE_ANON_KEY
 );
+
 
 
 // Show messages
