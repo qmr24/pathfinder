@@ -4,10 +4,11 @@
 const SUPABASE_URL = 'https://ztgcchuceqcdcpzephww.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_rmmBJ77ypdwgK9a0Ec0KLA_cP0efZ1w';
 
-const supabaseClient = window.supabase.createClient(
+const supabaseClient = supabase.createClient(
     SUPABASE_URL,
     SUPABASE_ANON_KEY
 );
+
 
 
 // Show messages
