@@ -1,4 +1,5 @@
-
+// Supabase browser client
+// NEVER put the service-role key in frontend code.
 
 const SUPABASE_URL = 'https://ztgcchuceqcdcpzephww.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_rmmBJ77ypdwgK9a0Ec0KLA_cP0efZ1w';
@@ -9,10 +10,7 @@ const supabaseClient = window.supabase.createClient(
 );
 
 
-// --------------------------------------------------
-// Helper: show message
-// --------------------------------------------------
-
+// Show messages
 function showMessage(text, type = 'alert') {
     const el = document.getElementById('message');
 
@@ -23,50 +21,53 @@ function showMessage(text, type = 'alert') {
 }
 
 
-// --------------------------------------------------
-// Student Signup
-// --------------------------------------------------
+// Student signup
+const signupForm = document.getElementById('signupForm');
 
-document.getElementById('signupForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+if (signupForm) {
 
-    const fullName = document.getElementById('fullName').value.trim();
-    const studentId = document.getElementById('studentId').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const school = document.getElementById('school').value.trim();
-    const batch = document.getElementById('batch').value.trim();
-    const combination = document.getElementById('combination').value;
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
+    signupForm.addEventListener('submit', async function (e) {
 
+        e.preventDefault();
 
-    // Password confirmation
-    if (password !== confirmPassword) {
-        showMessage('Passwords do not match.');
-        return;
-    }
+        const fullName = document.getElementById('fullName').value.trim();
+        const studentId = document.getElementById('studentId').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const school = document.getElementById('school').value.trim();
+        const batch = document.getElementById('batch').value.trim();
+        const combination = document.getElementById('combination').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
 
 
-    // Basic batch validation
-    const batchNumber = parseInt(batch);
-
-    if (batch && isNaN(batchNumber)) {
-        showMessage('Please enter a valid A/L batch/year.');
-        return;
-    }
+        // Check passwords
+        if (password !== confirmPassword) {
+            showMessage('Passwords do not match.');
+            return;
+        }
 
 
-    showMessage('Creating your account...', 'alert');
+        // Check batch
+        let batchNumber = null;
+
+        if (batch !== '') {
+            batchNumber = parseInt(batch, 10);
+
+            if (isNaN(batchNumber)) {
+                showMessage('Please enter a valid A/L batch/year.');
+                return;
+            }
+        }
 
 
-    try {
+        showMessage('Creating your account...');
 
-        // --------------------------------------------------
-        // 1. Create Supabase Auth account
-        // --------------------------------------------------
 
-        const { data: authData, error: authError } =
-            await supabaseClient.auth.signUp({
+        try {
+
+            // 1. Create Supabase Auth account
+
+            const result = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
                 options: {
@@ -74,58 +75,62 @@ document.getElementById('signupForm')?.addEventListener('submit', async (e) => {
                         full_name: fullName,
                         student_id: studentId,
                         school: school,
-                        al_batch: batchNumber || null,
+                        al_batch: batchNumber,
                         combination_code: combination
                     }
                 }
             });
 
 
-        if (authError) {
-            console.error('Auth error:', authError);
-            showMessage(authError.message);
-            return;
-        }
+            const authData = result.data;
+            const authError = result.error;
 
 
-        if (!authData.user) {
-            showMessage('Account could not be created.');
-            return;
-        }
+            if (authError) {
+                console.error('Auth error:', authError);
+                showMessage(authError.message);
+                return;
+            }
 
 
-        const userId = authData.user.id;
+            if (!authData || !authData.user) {
+                showMessage('Account could not be created.');
+                return;
+            }
 
 
-        // --------------------------------------------------
-        // 2. Find selected subject combination
-        // --------------------------------------------------
+            const userId = authData.user.id;
 
-        const { data: combinationData, error: combinationError } =
-            await supabaseClient
+            console.log('Supabase Auth user created:', userId);
+
+
+            // 2. Find subject combination
+
+            const combinationResult = await supabaseClient
                 .from('subject_combinations')
                 .select('id')
                 .eq('code', combination)
                 .single();
 
 
-        if (combinationError) {
-            console.error('Combination error:', combinationError);
-
-            showMessage(
-                'Account was created, but the selected subject combination could not be found in the database.'
-            );
-
-            return;
-        }
+            const combinationData = combinationResult.data;
+            const combinationError = combinationResult.error;
 
 
-        // --------------------------------------------------
-        // 3. Create profile
-        // --------------------------------------------------
+            if (combinationError) {
+                console.error('Combination error:', combinationError);
 
-        const { error: profileError } =
-            await supabaseClient
+                showMessage(
+                    'Account was created, but the selected subject combination was not found.'
+                );
+
+                return;
+            }
+
+
+            // 3. Create profile
+
+            const profileResult = await supabaseClient
                 .from('profiles')
                 .insert({
                     id: userId,
@@ -133,42 +138,46 @@ document.getElementById('signupForm')?.addEventListener('submit', async (e) => {
                     student_id: studentId,
                     email: email,
                     school: school,
-                    al_batch: batchNumber || null,
+                    al_batch: batchNumber,
                     role: 'student',
                     combination_id: combinationData.id
                 });
 
 
-        if (profileError) {
-            console.error('Profile error:', profileError);
+            const profileError = profileResult.error;
+
+
+            if (profileError) {
+                console.error('Profile error:', profileError);
+
+                showMessage(
+                    'Account was created, but the student profile could not be created.'
+                );
+
+                return;
+            }
+
+
+            // 4. Success
+
+            console.log('Student profile created successfully.');
 
             showMessage(
-                'Your authentication account was created, but your student profile could not be created. Check the browser console for details.'
+                'Account created successfully! You can now log in.',
+                'success'
             );
 
-            return;
+            signupForm.reset();
+
+        } catch (error) {
+
+            console.error('Unexpected signup error:', error);
+
+            showMessage(
+                'Something went wrong. Check the browser console.'
+            );
         }
 
+    });
 
-        // --------------------------------------------------
-        // 4. Success
-        // --------------------------------------------------
-
-        showMessage(
-            'Account created successfully! You can now log in.',
-            'success'
-        );
-
-        document.getElementById('signupForm').reset();
-
-
-    } catch (error) {
-
-        console.error('Unexpected signup error:', error);
-
-        showMessage(
-            'Something went wrong while creating your account.'
-        );
-    }
-});
-```
+}
