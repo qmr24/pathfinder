@@ -197,7 +197,7 @@ if (adminLoginForm) {
                     .from('admin_roles')
                     .select('admin_role')
                     .eq('profile_id', authData.user.id)
-                    .single();
+                    .maybeSingle();
 
                 if (!adminRoleData) {
                     // Check if role is admin in profile
@@ -205,7 +205,7 @@ if (adminLoginForm) {
                         .from('profiles')
                         .select('role')
                         .eq('id', authData.user.id)
-                        .single();
+                        .maybeSingle();
 
                     if (!profileData || profileData.role !== 'admin') {
                         await supabaseClient.auth.signOut();
