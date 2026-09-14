@@ -1,35 +1,34 @@
-// Supabase browser client
-// NEVER put the service-role key in frontend code.
-
+// Supabase browser client initialization
 const SUPABASE_URL = 'https://ztgcchuceqcdcpzephww.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_rmmBJ77ypdwgK9a0Ec0KLA_cP0efZ1w';
 
-const supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
-);
+// Create Supabase client instance safely
+const supabaseClient = typeof supabase !== 'undefined'
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
-
-
-// Show messages
+// Helper to show status messages on auth forms
 function showMessage(text, type = 'alert') {
     const el = document.getElementById('message');
-
     if (el) {
         el.textContent = text;
-        el.className = type;
+        el.className = type === 'success' ? 'message-success' : 'message-error';
+        el.style.display = 'block';
     }
 }
 
-
-// Student signup
+// ----------------------------------------------------
+// 1. STUDENT SIGNUP HANDLER
+// ----------------------------------------------------
 const signupForm = document.getElementById('signupForm');
-
 if (signupForm) {
-
     signupForm.addEventListener('submit', async function (e) {
-
         e.preventDefault();
+
+        if (!supabaseClient) {
+            showMessage('Supabase SDK not loaded.');
+            return;
+        }
 
         const fullName = document.getElementById('fullName').value.trim();
         const studentId = document.getElementById('studentId').value.trim();
@@ -40,35 +39,18 @@ if (signupForm) {
         const password = document.getElementById('password').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
 
-
-        // Check passwords
         if (password !== confirmPassword) {
             showMessage('Passwords do not match.');
             return;
         }
 
+        let batchNumber = batch ? parseInt(batch, 10) : 2026;
 
-        // Check batch
-        let batchNumber = null;
-
-        if (batch !== '') {
-            batchNumber = parseInt(batch, 10);
-
-            if (isNaN(batchNumber)) {
-                showMessage('Please enter a valid A/L batch/year.');
-                return;
-            }
-        }
-
-
-        showMessage('Creating your account...');
-
+        showMessage('Creating your student account...', 'alert');
 
         try {
-
-            // 1. Create Supabase Auth account
-
-            const result = await supabaseClient.auth.signUp({
+            // Step A: Create Auth account
+            const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
                 options: {
@@ -82,56 +64,32 @@ if (signupForm) {
                 }
             });
 
-
-            const authData = result.data;
-            const authError = result.error;
-
-
             if (authError) {
-                console.error('Auth error:', authError);
                 showMessage(authError.message);
                 return;
             }
 
-
             if (!authData || !authData.user) {
-                showMessage('Account could not be created.');
+                showMessage('Account creation failed.');
                 return;
             }
 
-
             const userId = authData.user.id;
 
-            console.log('Supabase Auth user created:', userId);
-
-
-            // 2. Find subject combination
-
-            const combinationResult = await supabaseClient
+            // Step B: Find Subject Combination ID
+            let combinationId = null;
+            const { data: combData } = await supabaseClient
                 .from('subject_combinations')
                 .select('id')
                 .eq('code', combination)
                 .single();
 
-
-            const combinationData = combinationResult.data;
-            const combinationError = combinationResult.error;
-
-
-            if (combinationError) {
-                console.error('Combination error:', combinationError);
-
-                showMessage(
-                    'Account was created, but the selected subject combination was not found.'
-                );
-
-                return;
+            if (combData) {
+                combinationId = combData.id;
             }
 
-
-            // 3. Create profile
-
-            const profileResult = await supabaseClient
+            // Step C: Create Student Profile
+            const { error: profileError } = await supabaseClient
                 .from('profiles')
                 .insert({
                     id: userId,
@@ -141,44 +99,139 @@ if (signupForm) {
                     school: school,
                     al_batch: batchNumber,
                     role: 'student',
-                    combination_id: combinationData.id
+                    combination_id: combinationId
                 });
 
+            if (profileError && !profileError.message.includes('duplicate key')) {
+                console.error('Profile Error:', profileError);
+            }
 
-            const profileError = profileResult.error;
+            showMessage('Account created successfully! Redirecting to login...', 'success');
+            signupForm.reset();
 
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1500);
 
-            if (profileError) {
-                console.error('Profile error:', profileError);
+        } catch (err) {
+            console.error('Signup Error:', err);
+            showMessage('Unexpected error occurred during signup.');
+        }
+    });
+}
 
-                showMessage(
-                    'Account was created, but the student profile could not be created.'
-                );
+// ----------------------------------------------------
+// 2. STUDENT LOGIN HANDLER
+// ----------------------------------------------------
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+    loginForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
 
+        if (!supabaseClient) {
+            showMessage('Supabase SDK not loaded.');
+            return;
+        }
+
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        showMessage('Signing in...', 'alert');
+
+        try {
+            const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (authError) {
+                showMessage(authError.message || 'Invalid email or password.');
                 return;
             }
 
+            if (authData?.user) {
+                showMessage('Login successful! Redirecting to dashboard...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'student/dashboard.html';
+                }, 800);
+            }
+        } catch (err) {
+            console.error('Login Error:', err);
+            showMessage('Login failed. Please check your network and try again.');
+        }
+    });
+}
 
-            // 4. Success
+// ----------------------------------------------------
+// 3. ADMIN LOGIN HANDLER
+// ----------------------------------------------------
+const adminLoginForm = document.getElementById('adminLoginForm');
+if (adminLoginForm) {
+    adminLoginForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
 
-            console.log('Student profile created successfully.');
-
-            showMessage(
-                'Account created successfully! You can now log in.',
-                'success'
-            );
-
-            signupForm.reset();
-
-        } catch (error) {
-
-            console.error('Unexpected signup error:', error);
-
-            showMessage(
-                'Something went wrong. Check the browser console.'
-            );
+        if (!supabaseClient) {
+            showMessage('Supabase SDK not loaded.');
+            return;
         }
 
-    });
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
 
+        showMessage('Verifying admin credentials...', 'alert');
+
+        try {
+            const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (authError) {
+                showMessage(authError.message || 'Invalid administrative credentials.');
+                return;
+            }
+
+            if (authData?.user) {
+                // Verify admin role in admin_roles or profile
+                const { data: adminRoleData } = await supabaseClient
+                    .from('admin_roles')
+                    .select('admin_role')
+                    .eq('profile_id', authData.user.id)
+                    .single();
+
+                if (!adminRoleData) {
+                    // Check if role is admin in profile
+                    const { data: profileData } = await supabaseClient
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', authData.user.id)
+                        .single();
+
+                    if (!profileData || profileData.role !== 'admin') {
+                        await supabaseClient.auth.signOut();
+                        showMessage('Access Denied: This user does not have administrator permissions.');
+                        return;
+                    }
+                }
+
+                showMessage('Admin verified! Redirecting to admin portal...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 800);
+            }
+        } catch (err) {
+            console.error('Admin Login Error:', err);
+            showMessage('Admin login failed.');
+        }
+    });
+}
+
+// ----------------------------------------------------
+// 4. LOGOUT HELPER
+// ----------------------------------------------------
+async function logoutUser() {
+    if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+    }
+    window.location.href = '../login.html';
 }
