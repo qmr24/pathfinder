@@ -1,1 +1,106 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Students | Path Finders</title><link rel="stylesheet" href="../css/main.css"></head><body><div id="header"></div><main class="container"><section class="page-head"><h1>Students</h1><p class="muted">Admin module placeholder. Connect the secure Supabase queries and role checks described in the documentation.</p></section><div class="card"><p>Build the module here without exposing unauthorized data to the client. Database RLS is the security boundary.</p></div></main><script src="../js/app.js"></script><script src="../js/admin.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Manage Students | Path Finders Admin</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/auth.css">
+  <style>
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div id="header"></div>
+
+  <main class="container" style="padding-top:2rem; padding-bottom:4rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:1.5rem;">
+      <div>
+        <a href="dashboard.html" style="text-decoration:none; color:#475569; font-weight:600;">← Back to Admin Portal</a>
+        <h1 style="margin-top:0.5rem;">👥 Student Management</h1>
+      </div>
+      <input type="text" id="studentSearch" placeholder="Search by name, email, or ID..." style="padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; min-width:260px;">
+    </div>
+
+    <div id="adminMessage"></div>
+
+    <div class="card table-wrap" style="overflow-x:auto;">
+      <table class="table" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f8fafc; text-align:left;">
+            <th style="padding:12px;">Student ID</th>
+            <th style="padding:12px;">Full Name</th>
+            <th style="padding:12px;">Email</th>
+            <th style="padding:12px;">School</th>
+            <th style="padding:12px;">A/L Batch</th>
+            <th style="padding:12px;">Role</th>
+            <th style="padding:12px; text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentTableBody">
+          <tr><td colspan="7" style="padding:20px; text-align:center;" class="muted">Loading students...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" class="modal-overlay">
+      <div class="modal-card">
+        <h2 style="margin-top:0; margin-bottom:1rem;">✏️ Edit Student Info</h2>
+        <form id="editStudentForm">
+          <input type="hidden" id="editStudentId">
+          <div class="field" style="margin-bottom:1rem;">
+            <label>Full Name</label>
+            <input type="text" id="editFullName" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+          <div class="field" style="margin-bottom:1rem;">
+            <label>Student ID / Index</label>
+            <input type="text" id="editStudentIndex" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+          <div class="field" style="margin-bottom:1rem;">
+            <label>School</label>
+            <input type="text" id="editSchool" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+          <div class="field" style="margin-bottom:1rem;">
+            <label>A/L Batch</label>
+            <input type="number" id="editBatch" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+          <div class="field" style="margin-bottom:1rem;">
+            <label>User Role</label>
+            <select id="editRole" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="student">Student</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:1.5rem;">
+            <button type="button" onclick="closeEditModal()" class="btn btn-secondary" style="padding:8px 16px;">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>

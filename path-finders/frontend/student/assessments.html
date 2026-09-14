@@ -1,1 +1,43 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Assessments | Path Finders</title><link rel="stylesheet" href="../css/main.css"></head><body><div id="header"></div><main class="container"><section class="page-head"><h1>Monthly Assessments</h1><p class="muted">Your assessment results and links to available assessments.</p></section><div class="card table-wrap"><table class="table"><thead><tr><th>Month</th><th>Assessment</th><th>Subject</th><th>Mark</th><th>Status</th></tr></thead><tbody id="assessmentRows"><tr><td>January</td><td>Assessment 01</td><td>Accounting</td><td>—</td><td><span class="badge">Not loaded</span></td></tr></tbody></table></div></main><script src="../js/app.js"></script><script src="../js/assessments.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Assessments & Exams | Path Finders</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <main class="container" style="padding-top:2rem; padding-bottom:4rem;">
+    <section class="page-head" style="margin-bottom:2rem;">
+      <h1>📝 Monthly Assessments & Google Form Exams</h1>
+      <p class="muted">Access active assessment links, submit your Google Forms, and view your graded results.</p>
+    </section>
+
+    <div class="card table-wrap" style="overflow-x:auto;">
+      <table class="table" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f8fafc; text-align:left;">
+            <th style="padding:12px;">Date</th>
+            <th style="padding:12px;">Assessment Title</th>
+            <th style="padding:12px;">Subject</th>
+            <th style="padding:12px;">Google Form Exam</th>
+            <th style="padding:12px;">My Score</th>
+            <th style="padding:12px;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="assessmentRows">
+          <tr><td colspan="6" style="padding:20px; text-align:center;" class="muted">Loading assessments...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/assessments.js"></script>
+</body>
+</html>
