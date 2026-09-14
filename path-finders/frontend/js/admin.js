@@ -6,11 +6,19 @@ const supabaseClient = typeof supabase !== 'undefined'
   ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
+// Default Commerce A/L Subjects Fallback
+const DEFAULT_SUBJECTS = [
+  { id: '11111111-1111-1111-1111-111111111111', name: 'Accounting', code: 'ACC' },
+  { id: '22222222-2222-2222-2222-222222222222', name: 'Economics', code: 'ECO' },
+  { id: '33333333-3333-3333-3333-333333333333', name: 'ICT', code: 'ICT' },
+  { id: '44444444-4444-4444-4444-444444444444', name: 'Business Studies', code: 'BS' }
+];
+
 function showAdminMsg(text, type = 'alert') {
   const el = document.getElementById('adminMessage');
   if (el) {
-    el.innerHTML = `<div style="padding:10px 14px; margin-bottom:1rem; border-radius:8px; font-weight:600; ${
-      type === 'success' ? 'background:#dcfce7; color:#15803d;' : 'background:#fee2e2; color:#b91c1c;'
+    el.innerHTML = `<div style="padding:12px 16px; margin-bottom:1.5rem; border-radius:8px; font-weight:600; ${
+      type === 'success' ? 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;' : 'background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;'
     }">${text}</div>`;
   }
 }
@@ -32,6 +40,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   initAssessmentManagement();
   initResourceManagement();
 });
+
+// Helper to fetch subjects with fallback
+async function getSubjectsList() {
+  try {
+    const { data: subjects, error } = await supabaseClient.from('subjects').select('id, name, code');
+    if (!error && subjects && subjects.length > 0) {
+      return subjects;
+    }
+  } catch (err) {
+    console.warn('Could not fetch subjects from DB, using defaults:', err);
+  }
+  return DEFAULT_SUBJECTS;
+}
 
 // ----------------------------------------------------
 // 1. ADMIN DASHBOARD STATS
@@ -100,7 +121,7 @@ async function initStudentManagement() {
       if (error) {
         showAdminMsg('Failed to update student: ' + error.message, 'error');
       } else {
-        showAdminMsg('Student updated successfully!', 'success');
+        showAdminMsg('Student details updated successfully!', 'success');
         closeEditModal();
         await loadStudentsTable();
       }
@@ -110,13 +131,28 @@ async function initStudentManagement() {
 
 async function loadStudentsTable() {
   const tableBody = document.getElementById('studentTableBody');
+  if (!tableBody) return;
+
   const { data: students, error } = await supabaseClient
     .from('profiles')
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (error || !students) {
-    tableBody.innerHTML = `<tr><td colspan="7" style="padding:20px; text-align:center;" class="message-error">Failed to load students.</td></tr>`;
+  if (error) {
+    console.error('Error fetching profiles:', error);
+    showAdminMsg('Error fetching profiles: ' + error.message, 'error');
+    tableBody.innerHTML = `<tr><td colspan="7" style="padding:20px; text-align:center; color:#b91c1c;">Failed to load profiles: ${error.message}</td></tr>`;
+    return;
+  }
+
+  if (!students || students.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="7" style="padding:20px; text-align:center;" class="muted">
+          No profiles found in the database.<br>
+          <small>If students have signed up but are not appearing here, run the Profile Sync SQL script in Supabase.</small>
+        </td>
+      </tr>`;
     return;
   }
 
@@ -129,7 +165,7 @@ function renderStudentsRows(students) {
   if (!tableBody) return;
 
   if (students.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="7" style="padding:20px; text-align:center;" class="muted">No students found.</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="7" style="padding:20px; text-align:center;" class="muted">No matching student records found.</td></tr>`;
     return;
   }
 
@@ -188,13 +224,13 @@ async function initMarksManagement() {
   if (!form) return;
 
   // Load dropdowns
-  const { data: students } = await supabaseClient.from('profiles').select('id, full_name, email').eq('role', 'student');
+  const { data: students } = await supabaseClient.from('profiles').select('id, full_name, email');
   const { data: assessments } = await supabaseClient.from('assessments').select('id, title, subjects(name)').eq('active', true);
 
   const studentSelect = document.getElementById('markStudentSelect');
   if (studentSelect && students) {
     studentSelect.innerHTML = `<option value="">-- Choose Student --</option>` +
-      students.map(s => `<option value="${s.id}">${s.full_name} (${s.email})</option>`).join('');
+      students.map(s => `<option value="${s.id}">${s.full_name || s.email} (${s.email || 'No email'})</option>`).join('');
   }
 
   const assessmentSelect = document.getElementById('markAssessmentSelect');
@@ -284,11 +320,11 @@ async function initAssessmentManagement() {
   const form = document.getElementById('createAssessmentForm');
   if (!form) return;
 
-  // Load Subjects Dropdown
-  const { data: subjects } = await supabaseClient.from('subjects').select('id, name, code');
+  // Load Subjects Dropdown with Commerce Defaults
+  const subjects = await getSubjectsList();
   const subjectSelect = document.getElementById('assessmentSubjectSelect');
-  if (subjectSelect && subjects) {
-    subjectSelect.innerHTML = `<option value="">-- Select Subject --</option>` +
+  if (subjectSelect) {
+    subjectSelect.innerHTML = `<option value="">-- Choose Subject (Accounting, Economics, ICT, Business Studies) --</option>` +
       subjects.map(s => `<option value="${s.id}">${s.name} (${s.code})</option>`).join('');
   }
 
@@ -297,29 +333,45 @@ async function initAssessmentManagement() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('assessmentTitle').value.trim();
-    const subjectId = subjectSelect.value;
+    const subjectId = subjectSelect.value || null;
     const formUrl = document.getElementById('assessmentFormUrl').value.trim();
     const maxMark = parseFloat(document.getElementById('assessmentMaxMark').value) || 100;
     const assessmentDate = document.getElementById('assessmentDate').value || new Date().toISOString().split('T')[0];
 
+    const payload = {
+      title: title,
+      form_url: formUrl,
+      max_mark: maxMark,
+      assessment_date: assessmentDate,
+      active: true
+    };
+
+    if (subjectId) {
+      payload.subject_id = subjectId;
+    }
+
     const { error } = await supabaseClient
       .from('assessments')
-      .insert({
-        title: title,
-        subject_id: subjectId,
-        form_url: formUrl,
-        max_mark: maxMark,
-        assessment_date: assessmentDate,
-        active: true
-      });
+      .insert(payload);
 
     if (error) {
-      showAdminMsg('Failed to create assessment: ' + error.message, 'error');
-    } else {
-      showAdminMsg('New Google Form assessment published!', 'success');
-      form.reset();
-      await loadAssessmentsTable();
+      // Retry without subject_id if foreign key constraint failed
+      if (error.message.includes('foreign key constraint') || error.code === '23503') {
+        delete payload.subject_id;
+        const { error: retryErr } = await supabaseClient.from('assessments').insert(payload);
+        if (retryErr) {
+          showAdminMsg('Failed to create assessment: ' + retryErr.message, 'error');
+          return;
+        }
+      } else {
+        showAdminMsg('Failed to create assessment: ' + error.message, 'error');
+        return;
+      }
     }
+
+    showAdminMsg('New Google Form assessment published successfully!', 'success');
+    form.reset();
+    await loadAssessmentsTable();
   });
 }
 
@@ -340,7 +392,7 @@ async function loadAssessmentsTable() {
   tableBody.innerHTML = assessments.map(a => `
     <tr style="border-bottom:1px solid #e2e8f0;">
       <td style="padding:12px;"><strong>${a.title}</strong></td>
-      <td style="padding:12px;">${a.subjects?.name || 'General'}</td>
+      <td style="padding:12px;">${a.subjects?.name || 'Commerce'}</td>
       <td style="padding:12px;"><a href="${a.form_url}" target="_blank" style="color:#2563eb; font-weight:600; text-decoration:underline;">Open Google Form ↗</a></td>
       <td style="padding:12px;"><small class="muted">${a.assessment_date || '—'}</small></td>
       <td style="padding:12px;">
@@ -385,20 +437,28 @@ async function initResourceManagement() {
   const form = document.getElementById('createResourceForm');
   if (!form) return;
 
-  // Load Subjects & Categories Dropdowns
-  const { data: subjects } = await supabaseClient.from('subjects').select('id, name');
-  const { data: categories } = await supabaseClient.from('resource_categories').select('id, name');
-
+  const subjects = await getSubjectsList();
   const subjectSelect = document.getElementById('resourceSubjectSelect');
-  if (subjectSelect && subjects) {
+  if (subjectSelect) {
     subjectSelect.innerHTML = `<option value="">-- All / General --</option>` +
       subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
   }
 
+  const { data: categories } = await supabaseClient.from('resource_categories').select('id, name');
   const categorySelect = document.getElementById('resourceCategorySelect');
-  if (categorySelect && categories) {
-    categorySelect.innerHTML = `<option value="">-- Choose Category --</option>` +
-      categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  if (categorySelect) {
+    if (categories && categories.length > 0) {
+      categorySelect.innerHTML = `<option value="">-- Choose Category --</option>` +
+        categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    } else {
+      categorySelect.innerHTML = `
+        <option value="">-- Choose Category --</option>
+        <option value="Notes">Notes</option>
+        <option value="Past Papers">Past Papers</option>
+        <option value="Model Papers">Model Papers</option>
+        <option value="Revision Materials">Revision Materials</option>
+      `;
+    }
   }
 
   await loadResourcesTable();
@@ -407,21 +467,24 @@ async function initResourceManagement() {
     e.preventDefault();
     const title = document.getElementById('resourceTitle').value.trim();
     const subjectId = subjectSelect.value || null;
-    const categoryId = categorySelect.value;
+    const categoryVal = categorySelect.value;
     const fileUrl = document.getElementById('resourceFileUrl').value.trim();
     const description = document.getElementById('resourceDescription').value.trim();
 
+    const payload = {
+      title: title,
+      file_url: fileUrl,
+      description: description,
+      visibility: 'students',
+      archived: false
+    };
+
+    if (subjectId) payload.subject_id = subjectId;
+    if (categoryVal && categoryVal.length > 20) payload.category_id = categoryVal;
+
     const { error } = await supabaseClient
       .from('resources')
-      .insert({
-        title: title,
-        subject_id: subjectId,
-        category_id: categoryId,
-        file_url: fileUrl,
-        description: description,
-        visibility: 'students',
-        archived: false
-      });
+      .insert(payload);
 
     if (error) {
       showAdminMsg('Failed to publish resource: ' + error.message, 'error');
