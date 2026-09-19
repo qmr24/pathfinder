@@ -6,7 +6,9 @@ const supabaseClient = typeof supabase !== 'undefined'
   ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-const isSubfolder = window.location.pathname.includes('/student/') || window.location.pathname.includes('/admin/');
+const isSubfolder =
+ window.location.pathname.includes('/student/') || 
+ window.location.pathname.includes('/admin/');
 const prefix = isSubfolder ? '../' : '';
 
 function renderNavbar(user = null, profile = null) {
