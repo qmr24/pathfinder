@@ -1,4 +1,5 @@
 // Path Finders LMS — Admin Controller
+(() => {
 const SUPABASE_URL = 'https://ztgcchuceqcdcpzephww.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_rmmBJ77ypdwgK9a0Ec0KLA_cP0efZ1w';
 
@@ -199,6 +200,7 @@ window.openEditModal = function(id) {
   const modal = document.getElementById('editStudentModal');
   if (modal) modal.style.display = 'flex';
 };
+})();
 
 window.closeEditModal = function() {
   const modal = document.getElementById('editStudentModal');

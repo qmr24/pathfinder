@@ -1,4 +1,5 @@
 // Student Dashboard Controller
+(() => {
 const SUPABASE_URL = 'https://ztgcchuceqcdcpzephww.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_rmmBJ77ypdwgK9a0Ec0KLA_cP0efZ1w';
 
@@ -76,3 +77,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   const overallEl = document.getElementById('overall');
   if (overallEl) overallEl.textContent = (assessmentCount > 0 || examCount > 0) ? `${overallAvg.toFixed(1)}%` : '—';
 });
+})();

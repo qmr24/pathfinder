@@ -1,4 +1,5 @@
 // Student Assessments Controller
+(() => {
 const SUPABASE_URL = 'https://ztgcchuceqcdcpzephww.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_rmmBJ77ypdwgK9a0Ec0KLA_cP0efZ1w';
 
@@ -72,3 +73,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     tableRows.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center;" class="message-error">Failed to load assessments.</td></tr>`;
   }
 });
+})();

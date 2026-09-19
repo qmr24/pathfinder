@@ -1,4 +1,5 @@
 // Student Profile Controller
+(() => {
 const SUPABASE_URL = 'https://ztgcchuceqcdcpzephww.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_rmmBJ77ypdwgK9a0Ec0KLA_cP0efZ1w';
 
@@ -43,3 +44,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (combEl) combEl.textContent = profile.subject_combinations?.name || 'Commerce Stream';
   }
 });
+})();
