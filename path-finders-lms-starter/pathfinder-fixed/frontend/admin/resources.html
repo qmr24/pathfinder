@@ -17,6 +17,7 @@
     <div id="adminMessage"></div>
 
     <!-- Create Resource Card -->
+    <!-- BUG FIX: subject and category selects are now populated from DB by admin.js -->
     <div class="card" style="margin-bottom:2.5rem; padding:1.5rem; border-radius:12px;">
       <h3 style="margin-top:0; margin-bottom:1rem;">➕ Add New Resource Link / Document</h3>
       <form id="createResourceForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; align-items:end;">
@@ -27,27 +28,22 @@
 
         <div>
           <label style="font-weight:600; display:block; margin-bottom:4px;">Subject</label>
+          <!-- Populated by admin.js from real subjects table -->
           <select id="resourceSubjectSelect" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px;">
-            <option value="acc">Accounting</option>
-            <option value="eco">Economics</option>
-            <option value="bus">Business Studies</option>
-            <option value="ict">ICT</option>
+            <option value="">Loading subjects...</option>
           </select>
         </div>
 
         <div>
-          <label style="font-weight:600; display:block; margin-bottom:4px;">Category</label>
+          <label style="font-weight:600; display:block; margin-bottom:4px;">Category <span style="color:#ef4444">*</span></label>
+          <!-- Populated by admin.js from real resource_categories table -->
           <select id="resourceCategorySelect" required style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px;">
-            <option value=""></option>
-            <option value="past_papers">Past Papers</option>
-            <option value="study_notes">Study Notes</option>
-            <option value="textbooks">Textbooks</option>
-            <option value="other">Other</option>
+            <option value="">Loading categories...</option>
           </select>
         </div>
 
         <div>
-          <label style="font-weight:600; display:block; margin-bottom:4px;">File / Link URL</label>
+          <label style="font-weight:600; display:block; margin-bottom:4px;">File / Link URL <span style="color:#ef4444">*</span></label>
           <input type="url" id="resourceFileUrl" placeholder="https://drive.google.com/... or PDF link" required style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px;">
         </div>
 
