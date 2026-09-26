@@ -1,9 +1,9 @@
--- Migration 001: Path Finders LMS Core Database Schema
+-- Migration 001: Path Finders LMS Core Database Schema this is used to to tell the DB how the tables will look like and how they will relate to each other. This is the first migration for the Path Finders LMS project.
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Subjects Table
+-- 1. Subjects Table and this create table for subjects and id is automatically generated using uuid_generate_v4() function and code is unique and not null and name is not null and description is optional and created_at is automatically set to the current timestamp.
 CREATE TABLE IF NOT EXISTS public.subjects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code TEXT UNIQUE NOT NULL, -- ACC, ECON, ICT, BS
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.subjects (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Subject Combinations Table
+-- 2. Subject Combinations Table and this is used to update the subject combinations in our system
 CREATE TABLE IF NOT EXISTS public.subject_combinations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code TEXT UNIQUE NOT NULL, -- COMB_1_ICT, COMB_2_BS
@@ -21,14 +21,14 @@ CREATE TABLE IF NOT EXISTS public.subject_combinations (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Combination Subjects Join Table
+-- 3. Combination Subjects Join Table and this is used to join the subject with the combinations 
 CREATE TABLE IF NOT EXISTS public.combination_subjects (
     combination_id UUID REFERENCES public.subject_combinations(id) ON DELETE CASCADE,
     subject_id UUID REFERENCES public.subjects(id) ON DELETE CASCADE,
     PRIMARY KEY (combination_id, subject_id)
 );
 
--- 4. Profiles Table (Extends Supabase Auth users)
+-- 4. Profiles Table (Extends Supabase Auth users) and this is used to store user informations 
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name TEXT NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. User Roles Table (Admin Permissions Engine)
+-- 5. User Roles Table (Admin Permissions Engine) this for admin roles as super admin , academic admin and content admin and this is used to manage the roles of the users in the system
 CREATE TABLE IF NOT EXISTS public.user_roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
