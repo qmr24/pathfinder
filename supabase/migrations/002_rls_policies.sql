@@ -1,5 +1,5 @@
 -- Migration 002: Path Finders Row Level Security (RLS) & Helper Security Functions
-
+--this is the file that helps to define the row level security policies for the Path Finders LMS project. It includes helper functions to check user roles and permissions, and defines policies for each table to control access based on user roles and relationships.
 -- 1. Helper Security Functions (SECURITY DEFINER to run with creator permissions safely)
 
 -- Check if a user is any type of admin
@@ -43,7 +43,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
--- 2. ENABLE ROW LEVEL SECURITY ON ALL TABLES
+-- 2. ENABLE ROW LEVEL SECURITY ON ALL TABLES and if we didnt do this below codes it wont apply the row level security policies to the tables and it will allow all users to access all data in the tables without any restrictions.
 
 ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subject_combinations ENABLE ROW LEVEL SECURITY;
@@ -58,7 +58,7 @@ ALTER TABLE public.resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
 
--- 3. POLICIES DEFINITION
+-- 3. POLICIES DEFINITION (these are the policies that define who can access what data in the tables based on their roles and relationships)
 
 -- Subjects & Combinations: Public Read for all, Modify for Admins
 CREATE POLICY "Subjects are readable by everyone" ON public.subjects
@@ -76,7 +76,7 @@ CREATE POLICY "Combinations editable by admins only" ON public.subject_combinati
 CREATE POLICY "Combination subjects readable by everyone" ON public.combination_subjects
     FOR SELECT USING (true);
 
--- Profiles: Students read own profile, Admins read all profiles
+-- Profiles: Students read own profile, Admins read all profiles(this ensure that student can only read their own profiles and admins can read all profiles)
 CREATE POLICY "Users can view own profile or admins view all" ON public.profiles
     FOR SELECT USING (id = auth.uid() OR public.is_admin(auth.uid()));
 
